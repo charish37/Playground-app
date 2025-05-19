@@ -12,7 +12,7 @@ import {
 import { AuthContext } from '../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebase';
+import { auth } from '../firebaseConfig';
 
 export default function RegisterScreen() {
   const { setUserToken } = useContext(AuthContext);

@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, Alert } fro
 import { AuthContext } from '../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebase';
+import { auth } from '../firebaseConfig';
 
 export default function LoginScreen() {
   const { setUserToken } = useContext(AuthContext);
