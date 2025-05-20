@@ -3,30 +3,60 @@ import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, Alert } fro
 import { AuthContext } from '../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebaseConfig';
+import { auth, db } from '../firebaseConfig';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export default function LoginScreen() {
-  const { setUserToken } = useContext(AuthContext);
+  const { setUser, setProfile } = useContext(AuthContext);
   const navigation = useNavigation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
+  const ensureUserProfile = async (uid, email) => {
+    const userRef = doc(db, 'users', uid);
+    const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists()) {
+      const defaultProfile = {
+        fullName: email.split('@')[0], // fallback name
+        email,
+        avatar: '',
+        about: '',
+        followers: 0,
+        following: 0,
+      };
+      await setDoc(userRef, defaultProfile);
+      return defaultProfile;
+    } else {
+      return userSnap.data();
+    }
+  };
+
   const handleLogin = async () => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      setUserToken(user.uid); // Update context
+
+      const userProfile = await ensureUserProfile(user.uid, user.email);
+
+      // Set global auth state
+      setUser(user);
+      setProfile(userProfile);
+
+      Alert.alert('Success', 'Logged in successfully!');
+      // Optionally: navigation.replace('Home'); if you have a main screen
+
     } catch (error) {
-      console.error(error.message);
-      Alert.alert('Login Failed', 'Invalid username or password');
+      console.error('Login error:', error);
+      Alert.alert('Login Failed', 'Invalid email or password.');
     }
   };
 
   return (
     <View style={styles.container}>
       <Image
-        source={{ uri: 'https://res.cloudinary.com/dopfgiqrz/image/upload/v1744809260/campusconnect-high-resolution-logo_c8swtw.png' }}
+        source={require('../assets/callout.png')}
         style={styles.logo}
         resizeMode="contain"
       />

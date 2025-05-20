@@ -9,48 +9,77 @@ import {
   Alert,
   Button,
 } from 'react-native';
-import { AuthContext } from '../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebaseConfig';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, db } from '../firebaseConfig';
+import { AuthContext } from '../contexts/AuthContext';
 
 export default function RegisterScreen() {
-  const { setUserToken } = useContext(AuthContext);
   const navigation = useNavigation();
 
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const { setUser, setProfile } = useContext(AuthContext);
 
-  const handleRegister = async () => {
-    try {
-      if (!email.includes('@') || !email.includes('.')) {
-        throw new Error("Please enter a valid email address.");
-      }
-      if (password !== confirmPassword) {
-        throw new Error("Passwords don't match");
-      }
-      if (password.length < 6) {
-        throw new Error("Password must be at least 6 characters.");
-      }
+ const handleRegister = async () => {
+  try {
+    if (!name.trim()) throw new Error("Name is required.");
+    if (!email.includes('@') || !email.includes('.')) throw new Error("Invalid email.");
+    if (password !== confirmPassword) throw new Error("Passwords don't match.");
+    if (password.length < 6) throw new Error("Password must be at least 6 characters.");
 
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-      setUserToken(user.uid); // optionally set token if you want auto login
-      navigation.replace('Login');
-    } catch (error) {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+
+    const profileData = {
+      fullName: name,
+      email,
+      avatar: '',
+      about: '',
+      followers: 0,
+      following: 0,
+    };
+
+    await setDoc(doc(db, 'users', user.uid), profileData);
+
+    // Update auth context properly
+    setUser(user);            // From AuthContext
+    setProfile(profileData);  // From AuthContext
+
+    Alert.alert('Success', 'Registration complete!');
+    navigation.replace('Login');
+
+  } catch (error) {
+    console.error('❌ Registration error:', error);
+
+    if (error.code === 'auth/email-already-in-use') {
+      Alert.alert('Email Exists', 'This email is already registered. Please login.');
+    } else {
       Alert.alert('Registration Error', error.message);
     }
-  };
+  }
+};
+
 
   return (
     <View style={styles.container}>
       <Image
-        source={{ uri: 'https://res.cloudinary.com/dopfgiqrz/image/upload/v1744809260/campusconnect-high-resolution-logo_c8swtw.png' }}
+        source={require('../assets/callout.png')}
         style={styles.logo}
         resizeMode="contain"
       />
       <View style={styles.form}>
+        <Text style={styles.label}>Name</Text>
+        <TextInput
+          onChangeText={setName}
+          value={name}
+          style={styles.input}
+          placeholder="Enter your name"
+        />
+
         <Text style={styles.label}>Email</Text>
         <TextInput
           onChangeText={setEmail}
